@@ -11,7 +11,6 @@ from tensorflow import keras
 from tensorflow.keras import layers
 #download data for cars
 dataset_path = keras.utils.get_file("auto-mpg.data", "https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data")
-dataset_path
 #format data
 column_names = ['MPG','Cylinders','Displacement','Horsepower','Weight',
                 'Acceleration', 'Model Year', 'Origin'] 
@@ -30,15 +29,15 @@ print(dataset.tail())
 
 train_dataset = dataset.sample(frac=0.8,random_state=0)
 test_dataset = dataset.drop(train_dataset.index)
-
+#Show graph displaying different labels of the data and how they differ
 sns.pairplot(train_dataset[["MPG", "Cylinders", "Displacement", "Weight"]], diag_kind="kde")
 train_stats = train_dataset.describe()
 train_stats.pop("MPG")
 train_stats = train_stats.transpose()
-train_stats
+print(train_stats)
 #Separate the target value, or "label", from the features. 
 # This label is the value that will train the model to predict.
-
+bias_initializer = tf.constant_initializer(value=1.5)
 train_labels = train_dataset.pop('MPG')
 test_labels = test_dataset.pop('MPG')
 #Normalize the data
@@ -49,8 +48,12 @@ normed_test_data = norm(test_dataset)
 #Build the model
 def build_model():
   model = keras.Sequential([
-    layers.Dense(64, activation=tf.nn.relu, input_shape=[len(train_dataset.keys())]),
-    layers.Dense(64, activation=tf.nn.relu),
+    #UPDATE made model layers more dense as with lack of training data
+    # Approaching problem with process of making a large input pool to be simplified for stronger training
+    layers.Dense(32, activation=tf.nn.relu, input_shape=[len(train_dataset.keys())]),
+    layers.Dense(16, activation=tf.nn.relu),
+    # layers.Dense(8, activation=tf.nn.relu),
+    # layers.Dense(16, activation=tf.nn.relu),
     layers.Dense(1)
   ])
 
@@ -64,6 +67,7 @@ def build_model():
 #Instantiate model
 model = build_model()
 # The patience parameter is the amount of epochs to check for improvement
+#10 has been chosen to give the model some learning room to avoid overfitting.
 early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
 
 
@@ -71,7 +75,7 @@ early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
 model.summary()
 example_batch = normed_train_data[:10]
 example_result = model.predict(example_batch)
-example_result
+# print(example_result)
 # Display training progress by printing a single dot for each completed epoch
 class PrintDot(keras.callbacks.Callback):
   def on_epoch_end(self, epoch, logs):
@@ -110,20 +114,24 @@ def plot_history(history):
   plt.legend()
   plt.ylim([0,20])
 plot_history(history)
-#Evaluate model uncomment below
-# test_predictions = model.predict(normed_test_data).flatten()
+# Evaluate model uncomment below
+test_predictions = model.predict(normed_test_data).flatten()
+loss, mae, mse = model.evaluate(normed_test_data, test_labels, verbose=0)
 
-# plt.scatter(test_labels, test_predictions)
-# plt.xlabel('True Values [MPG]')
-# plt.ylabel('Predictions [MPG]')
-# plt.axis('equal')
-# plt.axis('square')
-# plt.xlim([0,plt.xlim()[1]])
-# plt.ylim([0,plt.ylim()[1]])
-# _ = plt.plot([-100, 100], [-100, 100])
+print("Testing set Mean Abs Error: {:5.2f} MPG".format(mae))
+plt.scatter(test_labels, test_predictions)
+plt.xlabel('True Values [MPG]')
+plt.ylabel('Predictions [MPG]')
+plt.axis('equal')
+plt.axis('square')
+plt.xlim([0,plt.xlim()[1]])
+plt.ylim([0,plt.ylim()[1]])
+plt.margins(x=0, y=-0.25)
+plt.plot([-100, 100], [-100, 100])
+#Histogram graph 
 # error = test_predictions - test_labels
 # plt.hist(error, bins = 25)
 # plt.xlabel("Prediction Error [MPG]")
-# _ = plt.ylabel("Count")
+# plt.ylabel("Count")
 #Display graphs
 plt.show()
